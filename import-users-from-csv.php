@@ -3,7 +3,7 @@
 Plugin Name: Import Users from CSV
 Plugin URI: http://wordpress.org/extend/plugins/import-users-from-csv/
 Description: Import Users data and metadata from a csv file.
-Version: 1.0.1
+Version: 1.0.1.1
 Author: Andrew Lima
 Author URI: https://andrewlima.co.za
 License: GPL2
@@ -13,6 +13,7 @@ Text Domain: import-users-from-csv
 /*
  * Copyright 2011  Ulrich Sossou  (https://github.com/sorich87)
  * Copyright 2018  Andrew Lima  (https://github.com/andrewlimaza/import-users-from-csv)
+ * Modified 2021  Lee Hodson (https://github.com/VR51/import-users-from-csv)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
@@ -235,7 +236,7 @@ class IS_IU_Import_Users {
 								<legend class="screen-reader-text"><span><?php _e( 'Users update' , 'import-users-from-csv' ); ?></span></legend>
 
 								<label for="users_update">
-									<input id="users_update" name="users_update" type="checkbox" value="1" />
+									<input id="users_update" name="users_update" type="checkbox" value="1" checked />
 									<?php _e( 'Update user when a username or email exists', 'import-users-from-csv' ) ;?>
 								</label>
 							</fieldset>
@@ -251,8 +252,14 @@ class IS_IU_Import_Users {
 				<p class="submit">
 				 	<input type="submit" class="button-primary" value="<?php _e( 'Import' , 'import-users-from-csv'); ?>" />
 				</p>
+				
 			</form>
 		<?php
+		
+		if ( file_exists( $error_log_file ) ){
+			_e( '<p><a href="' . $error_log_url . '" target="_blank">Read the error log</a></p>', 'import-users-from-csv');
+		}
+		
 	}
 
 	/**
