@@ -78,7 +78,7 @@ Thanks to Ulrich Sossou for initially creating this plugin. Be sure to [check ou
 = 1.0.1.1 =
 * Added link to read the Error Log to admin settings page
 * Set option 'Update user when a username or email exists' to pre-checked
-* TO DO: Add option to schedule imports. See https://gist.github.com/VR51/f058f242e86eebd464ef09a6ecdc2365
+* TO DO: Add option to schedule imports. See https://gist.github.com/VR51/bd90a1dabfa32a90a122ff8760fd0fd3
 
 = 1.0.1 =
 * Fixed timeout bug on import.
