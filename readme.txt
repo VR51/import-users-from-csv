@@ -1,9 +1,9 @@
 === Import Users from CSV ===
-Contributors: sorich87, andrewza
+Contributors: sorich87, andrewza, vr51
 Tags: user, users, csv, batch, import, importer, admin
 Requires at least: 3.1
 Requires PHP: 5.6
-Tested up to: 5.0
+Tested up to: 5.8
 Stable tag: trunk
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4GC4JEZH7KSKL
 License: GPLv2 or later
@@ -74,6 +74,11 @@ Thanks to Ulrich Sossou for initially creating this plugin. Be sure to [check ou
 1. User import screen
 
 == Changelog ==
+
+= 1.0.1.1 =
+* Added link to read the Error Log to admin settings page
+* Set option 'Update user when a username or email exists' to pre-checked
+* TO DO: Add option to schedule imports. See https://gist.github.com/VR51/f058f242e86eebd464ef09a6ecdc2365
 
 = 1.0.1 =
 * Fixed timeout bug on import.
