@@ -394,8 +394,20 @@ class IS_IU_Import_Users {
 									<legend class="screen-reader-text"><span><?php _e( 'Schedule import time, date & periodicity' , 'import-users-from-csv' ); ?></span></legend>
 									</label>
 								</strong>
-								<?php $timedate = date( 'Y-m-d\TH:i', $schedule['timedate'] ); ?>
-								<input type="datetime-local" id="schedule_time" name="schedule_time" value="<?php echo "$timedate" ?>" required>
+								<?php
+									if ( ! wp_next_scheduled( 'scheduled_wp_user_import' ) ) {
+										if ( !empty($schedule['timedate']) ) {
+											$timestamp = date( 'Y-m-d\TH:i', $schedule['timedate'] );
+										} else {
+											$timestamp = date( 'Y-m-d\TH:i', time() );
+										}
+									} else {
+										$next = wp_next_scheduled( 'scheduled_wp_user_import' );
+										$timestamp = date( 'Y-m-d\TH:i', $next );
+										echo '<span>Next run:</span><small><br /><br /></small>';
+									}
+								?>
+								<input type="datetime-local" id="schedule_time" name="schedule_time" value="<?php echo "$timestamp" ?>" required>
 								<select id="schedule_period" name="schedule_period" required>
 									<option value="" selected hidden disabled>--Periodicity--</option>
 									<option value="hourly" <?php if ( $schedule['period'] == 'hourly' ) { echo 'selected'; } ?> >Hourly</option>
