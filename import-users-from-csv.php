@@ -3,7 +3,7 @@
 Plugin Name: Import Users from CSV
 Plugin URI: http://wordpress.org/extend/plugins/import-users-from-csv/
 Description: Import Users data and metadata from a csv file.
-Version: 1.0.1.1
+Version: 1.0.2
 Author: Andrew Lima
 Author URI: https://andrewlima.co.za
 License: GPL2
@@ -56,6 +56,9 @@ class IS_IU_Import_Users {
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'add_admin_pages' ) );
 		add_action( 'init', array( __CLASS__, 'process_csv' ) );
+		add_action( 'init', array( __CLASS__, 'schedule_csv' ) );
+		add_action( 'scheduled_wp_user_import', 'run_scheduled_user_import' );
+		// add_action( 'init', array( __CLASS__, 'run_scheduled_user_import' ) );
 
 		$upload_dir = wp_upload_dir();
 		self::$log_dir_path = trailingslashit( $upload_dir['basedir'] );
@@ -74,6 +77,66 @@ class IS_IU_Import_Users {
 	}
 
 	/**
+	 * Run Scheduled Import
+	 *
+	 * @since 1.0.2
+	 **/
+	
+	public static function run_scheduled_user_import() {
+		
+		$schedule = get_option('wp_user_import_set_import_schedule');
+
+	  	// Configure location of CSV file that is to be imported
+		$import_file_location = $schedule['file'];
+
+	  	// Configure plugin options
+		$args[] = array(
+			'password_nag' => $schedule['nag'], // Show password nag? true (1) or false (0)
+			'new_user_notification' => $schedule['notice'], // Send email notification to new users? true (1) or false (0)
+			'users_update' => $schedule['update'] // Update user profiles if username or email exists? true (1) or false (0)
+		);
+
+		// Optional: Configure name of directory within wp-uploads that the CSV file will import into
+		$dirname = 'user-import/';
+
+		// Download and store the CSV file that will be imported
+		// This step is not necessary in all cases but some servers and programs.. meh!
+		$upload_dir = wp_upload_dir();
+		$dir = trailingslashit( $upload_dir['basedir'] ) . $direname;
+		$upload_dir = wp_upload_dir();
+		$dir = trailingslashit( $upload_dir['basedir'] ) . $dirname;
+
+		$file = $dir . "import.csv";
+
+		// Fetch and save the CSV file. The file is stored with name 'import.csv' in the directory wp-uploads/user-import/
+		// require_once( ABSPATH . 'wp-admin/includes/file.php' ); // uncomment if this file is needed in your instance e.g this code is in a functionality plugin
+		global $wp_filesystem;
+		WP_Filesystem();
+
+		// Create $dir if it needs to be created
+		if( ! $wp_filesystem->is_dir( $dir ) ) {
+			$wp_filesystem->mkdir( $dir ); 
+		}
+
+		// Delete previously imported file if one exists
+		unlink( $filename );
+
+		// Fetch the import $csv file
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL, $import_file_location);
+		curl_setopt($ch, CURLOPT_TRANSFERTEXT, true);
+		curl_setopt($ch, CURLOPT_HEADER, false);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		$csv = curl_exec($ch);
+		curl_close($ch);
+
+		// Import the new file and set file permissions to 0644
+		$wp_filesystem->put_contents( $dir . "import.csv", $csv, 0644 ); 
+		
+ 		self::import_csv($file, $args);
+	}
+	
+	/**
 	 * Process content of CSV file
 	 *
 	 * @since 0.1
@@ -81,7 +144,7 @@ class IS_IU_Import_Users {
 	public static function process_csv() {
 		if ( isset( $_POST['_wpnonce-is-iu-import-users-users-page_import'] ) ) {
 			check_admin_referer( 'is-iu-import-users-users-page_import', '_wpnonce-is-iu-import-users-users-page_import' );
-
+			
 			if ( !empty( $_FILES['users_csv']['tmp_name'] ) ) {
 				/* Setup settings variables */
 				$filename              = sanitize_text_field( $_FILES['users_csv']['tmp_name'] );
@@ -110,6 +173,38 @@ class IS_IU_Import_Users {
 
 			wp_redirect( add_query_arg( 'import', 'file', wp_get_referer() ) );
 			exit;
+		}
+	}
+	
+	public static function schedule_csv() {
+
+		if ( isset( $_POST['_wpnonce-is-iu-import-users-users-page_import_schedule'] ) ) {
+			check_admin_referer( 'is-iu-import-users-users-page_import_schedule', '_wpnonce-is-iu-import-users-users-page_import_schedule' );
+
+			if ( $_POST['delete_import_schedule'] == '1' ) {
+				delete_option('wp_user_import_set_import_schedule');
+				$timestamp = wp_next_scheduled( 'scheduled_wp_user_import' );
+				wp_unschedule_event( $timestamp, 'scheduled_wp_user_import' );
+			}
+			
+			if ( $_POST['set_import_schedule'] == '1' ) {
+				/* Setup schedule variables */
+				$schedule['set']		= isset( $_POST['set_import_schedule'] ) ? sanitize_text_field( $_POST['set_import_schedule'] ) : false;
+				$schedule['timedate']	= isset( $_POST['schedule_time'] ) ? strtotime( $_POST['schedule_time'] ) : false;
+				$schedule['period']		= isset( $_POST['schedule_period'] ) ? sanitize_text_field( $_POST['schedule_period'] ) : false;
+				$schedule['file']		= isset( $_POST['schedule_file'] ) ? sanitize_text_field( $_POST['schedule_file'] ) : false;
+				
+				$schedule['notice']		= isset( $_POST['scheduled_new_user_notification'] ) ? sanitize_text_field( $_POST['scheduled_new_user_notification'] ) : false;
+				$schedule['nag']		= isset( $_POST['scheduled_password_nag'] ) ? sanitize_text_field( $_POST['scheduled_password_nag'] ) : false;
+				$schedule['update']		= isset( $_POST['scheduled_users_update'] ) ? sanitize_text_field( $_POST['scheduled_users_update'] ) : true;
+				
+				update_option('wp_user_import_set_import_schedule', $schedule, false);
+				
+				if ( ! wp_next_scheduled( 'scheduled_wp_user_import' ) ) {
+					wp_schedule_event( $schedule['timedate'], $schedule['period'], 'scheduled_wp_user_import' );
+				}
+			}
+
 		}
 	}
 
@@ -254,6 +349,99 @@ class IS_IU_Import_Users {
 				</p>
 				
 			</form>
+			
+			
+			<h2>Import Schedule</h2>
+			
+			<form method="post" action="" enctype="multipart/form-data">
+				<?php
+					wp_nonce_field( 'is-iu-import-users-users-page_import_schedule', '_wpnonce-is-iu-import-users-users-page_import_schedule' );
+					$schedule = get_option('wp_user_import_set_import_schedule');
+					// print_r($schedule);
+					// print_r($_POST);
+				?>
+
+				<table class="form-table widefat wp-list-table" style='padding: 5px;'>
+				
+					<tr valign="top">
+						<td>
+							<fieldset>
+								<?php if ( $schedule['set'] == false ) { ?>
+									<label for="set_import_schedule">
+										<legend class="screen-reader-text"><span><?php _e( 'Set regular remote import schedule?' , 'import-users-from-csv' ); ?></span></legend>
+										<input type="checkbox" id="set_import_schedule" name="set_import_schedule" value="1" <?php if ( $schedule['set'] == '1' ) { echo 'checked'; } ?> required />
+										<?php _e('Set regular remote import schedule?', 'import-users-from-csv'); ?>
+										<input type="text" id="delete_import_schedule" name="delete_import_schedule" value="0" hidden />
+									</label>
+								<?php } else { ?>
+									<label for="delete_import_schedule">
+										<legend class="screen-reader-text"><span><?php _e( 'Delete regular import schedule?' , 'import-users-from-csv' ); ?></span></legend>
+										<input type="checkbox" id="delete_import_schedule" name="delete_import_schedule" value="1" required />
+										<?php _e('Delete regular import schedule?', 'import-users-from-csv'); ?>
+										<input type="text" id="set_import_schedule" name="set_import_schedule" value="0" hidden />
+									</label>
+									<br /><br />
+									<p><strong>Current Import Schedule</strong></p>
+								<?php } ?>
+							</fieldset>
+						</td>
+					</tr>
+
+					<tr valign="top">
+						<td scope="row">
+								<strong>
+									<label for="schedule">
+									<legend class="screen-reader-text"><span><?php _e( 'Schedule import time, date & periodicity' , 'import-users-from-csv' ); ?></span></legend>
+									</label>
+								</strong>
+								<?php $timedate = date( 'Y-m-d\TH:i', $schedule['timedate'] ); ?>
+								<input type="datetime-local" id="schedule_time" name="schedule_time" value="<?php echo "$timedate" ?>" required>
+								<select id="schedule_period" name="schedule_period" required>
+									<option value="" selected hidden disabled>--Periodicity--</option>
+									<option value="hourly" <?php if ( $schedule['period'] == 'hourly' ) { echo 'selected'; } ?> >Hourly</option>
+									<option value="daily" <?php if ( $schedule['period'] == 'daily' ) { echo 'selected'; } ?> >Daily</option>
+									<option value="twicedaily" <?php if ( $schedule['period'] == 'twicedaily' ) { echo 'selected'; } ?> >Twice Daily</option>
+								</select>
+								<input type="url" id="schedule_file" name="schedule_file" placeholder="https://example.com/file.csv" pattern="https://.*" size="60" value="<?php echo $schedule['file'] ?>" required>
+						</td>
+					</tr>
+					
+					<tr valign="top">
+						<td>
+							<fieldset>
+								<legend class="screen-reader-text"><span><?php _e( 'Notification' , 'import-users-from-csv'); ?></span></legend>
+								<label for="scheduled_new_user_notification">
+									<input id="scheduled_new_user_notification" name="scheduled_new_user_notification" type="checkbox" value="1" />
+									<?php _e('Send email notification to new users', 'import-users-from-csv'); ?>
+								</label>
+								
+								<legend class="screen-reader-text"><span><?php _e( 'Password nag' , 'import-users-from-csv'); ?></span></legend>
+								<label for="scheduled_password_nag">
+									<input id="scheduled_password_nag" name="scheduled_password_nag" type="checkbox" value="1" />
+									<?php _e('Show password nag to new users at sign-on', 'import-users-from-csv') ?>
+								</label>
+								
+								<legend class="screen-reader-text"><span><?php _e( 'Users update' , 'import-users-from-csv' ); ?></span></legend>
+								<label for="scheduled_users_update">
+									<input id="scheduled_users_update" name="scheduled_users_update" type="checkbox" value="1" checked />
+									<?php _e( 'Update user data when a username or email exists', 'import-users-from-csv' ) ;?>
+								</label>
+							</fieldset>
+						</td>
+					</tr>
+
+				</table>
+
+				<p class="submit">
+					<?php if ( $schedule['set'] == false ) { ?>
+				 		<input type="submit" class="button-primary" value="<?php _e( 'Schedule' , 'import-users-from-csv'); ?>" />
+					<?php } else { ?>
+						<input type="submit" class="button-primary" value="<?php _e( 'Unschedule' , 'import-users-from-csv'); ?>" />
+					<?php } ?>
+				</p>
+				
+			</form>
+			
 		<?php
 		
 		if ( file_exists( $error_log_file ) ){
@@ -511,6 +699,11 @@ class IS_IU_Import_Users {
 		$class = esc_attr($class);
 		echo "<div class='$class'><p><strong>$message</strong></p></div>";
 	}
+}
+
+function run_scheduled_user_import() {
+	$import_users_vr51 = new IS_IU_Import_Users();
+	$import_users_vr51->run_scheduled_user_import();
 }
 
 IS_IU_Import_Users::init();
