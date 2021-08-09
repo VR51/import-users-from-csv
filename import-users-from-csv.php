@@ -4,7 +4,7 @@ Plugin Name: Import Users from CSV
 Plugin URI: http://wordpress.org/extend/plugins/import-users-from-csv/
 Description: Import Users data and metadata from a csv file.
 Version: 1.0.2
-Author: Andrew Lima
+Author: Andrew Lima & contributors
 Author URI: https://andrewlima.co.za
 License: GPL2
 Text Domain: import-users-from-csv
@@ -397,11 +397,18 @@ class IS_IU_Import_Users {
 								<?php
 									if ( ! wp_next_scheduled( 'scheduled_wp_user_import' ) ) {
 										if ( !empty($schedule['timedate']) ) {
+											// Restore the scheduled event if it has been deleted by a Cron Manager e.g the plugin Cron Control
 											$timestamp = date( 'Y-m-d\TH:i', $schedule['timedate'] );
+											if ( ! wp_next_scheduled( 'scheduled_wp_user_import' ) ) {
+												wp_schedule_event( $schedule['timedate'], $schedule['period'], 'scheduled_wp_user_import' );
+											}
+											echo '<span>Scheduled cron event restored. Next run:</span><small><br /><br /></small>';
 										} else {
+											// Display current time & date of no cron event is scheduled to run
 											$timestamp = date( 'Y-m-d\TH:i', time() );
 										}
 									} else {
+										// Display current scheduled event
 										$next = wp_next_scheduled( 'scheduled_wp_user_import' );
 										$timestamp = date( 'Y-m-d\TH:i', $next );
 										echo '<span>Next run:</span><small><br /><br /></small>';
