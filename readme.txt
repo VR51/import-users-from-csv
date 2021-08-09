@@ -75,6 +75,9 @@ Thanks to Ulrich Sossou for initially creating this plugin. Be sure to [check ou
 
 == Changelog ==
 
+= 1.0.2 =
+* Added remote file import scheduler.
+
 = 1.0.1.1 =
 * Added link to read the Error Log to admin settings page
 * Set option 'Update user when a username or email exists' to pre-checked
