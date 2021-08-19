@@ -75,6 +75,11 @@ Thanks to Ulrich Sossou for initially creating this plugin. Be sure to [check ou
 
 == Changelog ==
 
+= 1.0.3 =
+* Added log file deletion button.
+* Added import last run timestamps.
+* Adjusted texts.
+
 = 1.0.2 =
 * Added remote file import scheduler.
 
