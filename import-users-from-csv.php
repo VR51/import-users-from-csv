@@ -3,8 +3,8 @@
 Plugin Name: Import Users from CSV
 Plugin URI: http://wordpress.org/extend/plugins/import-users-from-csv/
 Description: Import Users data and metadata from a csv file.
-Version: 1.0.2
-Author: Andrew Lima & contributors
+Version: 1.0.3
+Author: Andrew Lima & Contributors
 Author URI: https://andrewlima.co.za
 License: GPL2
 Text Domain: import-users-from-csv
@@ -13,7 +13,7 @@ Text Domain: import-users-from-csv
 /*
  * Copyright 2011  Ulrich Sossou  (https://github.com/sorich87)
  * Copyright 2018  Andrew Lima  (https://github.com/andrewlimaza/import-users-from-csv)
- * Modified 2021  Lee Hodson (https://github.com/VR51/import-users-from-csv)
+ * Modified 2021  Lee Hodson (https://github.com/VR51/import-users-from-csv) v1.0.2, v1.0.3
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
@@ -58,6 +58,7 @@ class IS_IU_Import_Users {
 		add_action( 'init', array( __CLASS__, 'process_csv' ) );
 		add_action( 'init', array( __CLASS__, 'schedule_csv' ) );
 		add_action( 'scheduled_wp_user_import', 'run_scheduled_user_import' );
+		add_action('wp_ajax_iuaction_admin_ajax', ['IS_IU_Import_Users', 'iuaction_admin_ajax']);
 		// add_action( 'init', array( __CLASS__, 'run_scheduled_user_import' ) );
 
 		$upload_dir = wp_upload_dir();
@@ -77,19 +78,49 @@ class IS_IU_Import_Users {
 	}
 
 	/**
+	 * Delete Log File
+	 *
+	 * @since 1.0.3
+	 **/
+	public static function iuaction_admin_ajax() {
+
+		$response = array();
+		if ( ! empty($_POST['delete'] ) ) {
+			$error_log_file = self::$log_dir_path . 'is_iu_errors.log';
+			unlink($error_log_file);
+			if ( ! file_exists( $error_log_file ) ) {
+				$response['response'] = "Error log deleted.";
+			} else {
+				$response['response'] = "Error log NOT deleted.";
+			}
+		} else {
+			$response['response'] = "Error log not yet written.";
+		}
+
+		header( "Content-Type: application/json" );
+		echo json_encode($response);
+
+		// Don't forget to always exit in the ajax function.
+		exit();
+
+	}
+	
+	/**
 	 * Run Scheduled Import
 	 *
 	 * @since 1.0.2
 	 **/
-	
 	public static function run_scheduled_user_import() {
 		
 		$schedule = get_option('wp_user_import_set_import_schedule');
+		// Set timestamp
+		$schedule['last_run_sched'] = time();
+		update_option('wp_user_import_set_import_schedule', $schedule, false);
 
 	  	// Configure location of CSV file that is to be imported
 		$import_file_location = $schedule['file'];
 
-	  	// Configure plugin options
+	  	// Configure import options
 		$args[] = array(
 			'password_nag' => $schedule['nag'], // Show password nag? true (1) or false (0)
 			'new_user_notification' => $schedule['notice'], // Send email notification to new users? true (1) or false (0)
@@ -145,13 +176,19 @@ class IS_IU_Import_Users {
 		if ( isset( $_POST['_wpnonce-is-iu-import-users-users-page_import'] ) ) {
 			check_admin_referer( 'is-iu-import-users-users-page_import', '_wpnonce-is-iu-import-users-users-page_import' );
 			
-			if ( !empty( $_FILES['users_csv']['tmp_name'] ) ) {
+			if ( ! empty( $_FILES['users_csv']['tmp_name'] ) ) {
 				/* Setup settings variables */
 				$filename              = sanitize_text_field( $_FILES['users_csv']['tmp_name'] );
 				$password_nag          = isset( $_POST['password_nag'] ) ? sanitize_text_field( $_POST['password_nag'] ) : false;
 				$users_update          = isset( $_POST['users_update'] ) ? sanitize_text_field( $_POST['users_update'] ) : false;
 				$new_user_notification = isset( $_POST['new_user_notification'] ) ? sanitize_text_field( $_POST['new_user_notification'] ) : false;
+				
+				/* Set re-usable WP options data */
+				$import = get_option('wp_user_import_unscheduled');
+				$import['last_run'] = time(); // Set timestamp
+				update_option('wp_user_import_unscheduled', $import, false);
 
+				// Results
 				$results = self::import_csv( $filename, array(
 					'password_nag' => intval( $password_nag ),
 					'new_user_notification' => intval( $new_user_notification ),
@@ -337,6 +374,17 @@ class IS_IU_Import_Users {
 							</fieldset>
 						</td>
 					</tr>
+					<tr valign="top">
+						<td>
+							<?php
+								$import = get_option('wp_user_import_unscheduled');
+								if ( $import['last_run'] ) {
+									$lastrun = date( 'Y-m-d\TH:i', $schedule['last_run'] );
+									_e( '<small style="color: #777777">Last import: ' . $lastrun . '</small>', 'import-users-from-csv' );
+								}
+							?>
+						</td>
+					</tr>
 
 					<?php do_action('is_iu_import_page_inside_table_bottom'); ?>
 
@@ -350,16 +398,17 @@ class IS_IU_Import_Users {
 				
 			</form>
 			
-			
-			<h2>Import Schedule</h2>
+			<?php
+				$schedule = get_option('wp_user_import_set_import_schedule');
+				if ( $schedule['set'] == true ) {
+					_e( '<h2>Import Schedule</h2>', 'import-users-from-csv' );
+				} else {
+					_e( '<h2>Schedule Import</h2>', 'import-users-from-csv' );
+				}
+			?>
 			
 			<form method="post" action="" enctype="multipart/form-data">
-				<?php
-					wp_nonce_field( 'is-iu-import-users-users-page_import_schedule', '_wpnonce-is-iu-import-users-users-page_import_schedule' );
-					$schedule = get_option('wp_user_import_set_import_schedule');
-					// print_r($schedule);
-					// print_r($_POST);
-				?>
+				<?php wp_nonce_field( 'is-iu-import-users-users-page_import_schedule', '_wpnonce-is-iu-import-users-users-page_import_schedule' ); ?>
 
 				<table class="form-table widefat wp-list-table" style='padding: 5px;'>
 				
@@ -375,13 +424,11 @@ class IS_IU_Import_Users {
 									</label>
 								<?php } else { ?>
 									<label for="delete_import_schedule">
-										<legend class="screen-reader-text"><span><?php _e( 'Delete regular import schedule?' , 'import-users-from-csv' ); ?></span></legend>
+										<legend class="screen-reader-text"><span><?php _e( 'Delete import schedule?' , 'import-users-from-csv' ); ?></span></legend>
 										<input type="checkbox" id="delete_import_schedule" name="delete_import_schedule" value="1" required />
-										<?php _e('Delete regular import schedule?', 'import-users-from-csv'); ?>
+										<?php _e('Delete import schedule?', 'import-users-from-csv'); ?>
 										<input type="text" id="set_import_schedule" name="set_import_schedule" value="0" hidden />
 									</label>
-									<br /><br />
-									<p><strong>Current Import Schedule</strong></p>
 								<?php } ?>
 							</fieldset>
 						</td>
@@ -402,7 +449,7 @@ class IS_IU_Import_Users {
 											if ( ! wp_next_scheduled( 'scheduled_wp_user_import' ) ) {
 												wp_schedule_event( $schedule['timedate'], $schedule['period'], 'scheduled_wp_user_import' );
 											}
-											echo '<span>Scheduled cron event restored. Next run:</span><small><br /><br /></small>';
+											_e( '<span>Scheduled cron event restored. Next run:</span><small><br /><br /></small>', 'import-users-from-csv' );
 										} else {
 											// Display current time & date of no cron event is scheduled to run
 											$timestamp = date( 'Y-m-d\TH:i', time() );
@@ -411,7 +458,14 @@ class IS_IU_Import_Users {
 										// Display current scheduled event
 										$next = wp_next_scheduled( 'scheduled_wp_user_import' );
 										$timestamp = date( 'Y-m-d\TH:i', $next );
-										echo '<span>Next run:</span><small><br /><br /></small>';
+										_e( '<span>Next run:</span><small><br /></small>', 'import-users-from-csv' );
+										// Show last run
+										if ( $schedule['last_run_sched'] ) {
+											$lastrun = date( 'Y-m-d\TH:i', $schedule['last_run_sched'] );
+											_e( '<small style="color: #777777">Last import: '. $lastrun .'</small><br /><br />', 'import-users-from-csv' );
+										} else {
+											echo '</br />';
+										}
 									}
 								?>
 								<input type="datetime-local" id="schedule_time" name="schedule_time" value="<?php echo "$timestamp" ?>" required>
@@ -461,10 +515,40 @@ class IS_IU_Import_Users {
 				
 			</form>
 			
+			<script type="text/javascript">
+
+				function log_delete() {
+
+					var data = {
+						'action': 'iuaction_admin_ajax',
+						'delete': 'delete',
+					};
+
+					jQuery.post(ajaxurl, data, function(response) {
+						var $obj = response;
+						// alert($obj['response']);
+						// alert(JSON.stringify(response));
+						jQuery(".iuaction").css("display", "none");
+						jQuery("#delete_response").html($obj['response']);
+					});
+
+				}
+				// console.log("log_delete");
+			</script>
+			
 		<?php
-		
+			
 		if ( file_exists( $error_log_file ) ){
 			_e( '<p><a href="' . $error_log_url . '" target="_blank">Read the error log</a></p>', 'import-users-from-csv');
+			_e( '<p><a class="iuaction" href="#" onclick="log_delete()">Delete error log</a><div id="delete_response"></div></p>', 'import-users-from-csv');
+		}
+        
+		$debug = '';
+		if ( $debug == '1' ) {
+			print_r($import);
+			echo "<br /><br />";
+			print_r($schedule);
+			// print_r($_POST);
 		}
 		
 	}
