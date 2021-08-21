@@ -3,7 +3,7 @@
 Plugin Name: Import Users from CSV
 Plugin URI: http://wordpress.org/extend/plugins/import-users-from-csv/
 Description: Import Users data and metadata from a csv file.
-Version: 1.0.3
+Version: 1.0.3.1
 Author: Andrew Lima & Contributors
 Author URI: https://andrewlima.co.za
 License: GPL2
@@ -120,13 +120,6 @@ class IS_IU_Import_Users {
 	  	// Configure location of CSV file that is to be imported
 		$import_file_location = $schedule['file'];
 
-	  	// Configure import options
-		$args[] = array(
-			'password_nag' => $schedule['nag'], // Show password nag? true (1) or false (0)
-			'new_user_notification' => $schedule['notice'], // Send email notification to new users? true (1) or false (0)
-			'users_update' => $schedule['update'] // Update user profiles if username or email exists? true (1) or false (0)
-		);
-
 		// Optional: Configure name of directory within wp-uploads that the CSV file will import into
 		$dirname = 'user-import/';
 
@@ -164,7 +157,13 @@ class IS_IU_Import_Users {
 		// Import the new file and set file permissions to 0644
 		$wp_filesystem->put_contents( $dir . "import.csv", $csv, 0644 ); 
 		
- 		self::import_csv($file, $args);
+		self::import_csv( $file, array(
+			'password_nag' 			=> intval( $schedule['nag'] ), // Show password nag? true (1) or false (0)
+			'new_user_notification' => intval( $schedule['notice'] ), // Send email notification to new users? true (1) or false (0)
+			'users_update' 			=> intval( $schedule['update'] ) // Update user profiles if username or email exists? true (1) or false (0)
+		) );
+		
+ 		// self::import_csv($file, $args);
 	}
 	
 	/**
@@ -233,7 +232,7 @@ class IS_IU_Import_Users {
 				
 				$schedule['notice']		= isset( $_POST['scheduled_new_user_notification'] ) ? sanitize_text_field( $_POST['scheduled_new_user_notification'] ) : false;
 				$schedule['nag']		= isset( $_POST['scheduled_password_nag'] ) ? sanitize_text_field( $_POST['scheduled_password_nag'] ) : false;
-				$schedule['update']		= isset( $_POST['scheduled_users_update'] ) ? sanitize_text_field( $_POST['scheduled_users_update'] ) : true;
+				$schedule['update']		= isset( $_POST['scheduled_users_update'] ) ? sanitize_text_field( $_POST['scheduled_users_update'] ) : false;
 				
 				update_option('wp_user_import_set_import_schedule', $schedule, false);
 				
@@ -549,6 +548,10 @@ class IS_IU_Import_Users {
 			echo "<br /><br />";
 			print_r($schedule);
 			// print_r($_POST);
+			
+			echo '<br />'.intval( $schedule['nag'] );
+			echo '<br />'.intval( $schedule['notice'] );
+			echo '<br />'.intval( $schedule['update'] );
 		}
 		
 	}
