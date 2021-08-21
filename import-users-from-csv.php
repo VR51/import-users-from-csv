@@ -379,7 +379,7 @@ class IS_IU_Import_Users {
 							<?php
 								$import = get_option('wp_user_import_unscheduled');
 								if ( $import['last_run'] ) {
-									$lastrun = date( 'Y-m-d\TH:i', $schedule['last_run'] );
+									$lastrun = date( 'Y-m-d\TH:i', $import['last_run'] );
 									_e( '<small style="color: #777777">Last import: ' . $lastrun . '</small>', 'import-users-from-csv' );
 								}
 							?>
