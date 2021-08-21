@@ -75,6 +75,9 @@ Thanks to Ulrich Sossou for initially creating this plugin. Be sure to [check ou
 
 == Changelog ==
 
+= 1.0.3.1 =
+* Fixed bug in import scheduler
+
 = 1.0.3 =
 * Added log file deletion button.
 * Added import last run timestamps.
