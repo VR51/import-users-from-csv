@@ -75,6 +75,16 @@ Thanks to Ulrich Sossou for initially creating this plugin. Be sure to [check ou
 
 == Changelog ==
 
+= 1.0.4 =
+* Separated 'Update user if username or email exists' into 2 options: Update if username exists, Update if email exists.
+* Added option to record success messages when users are imported successfully. Messages are stored in the Errorlog (to be renamed)
+* Improved admin settings page: Fixed error in WP notice display; Added verbiage to explain prioritsation order for imported user matching against existing users: ID, username then email address.
+* Added Reschedule button to the import scheduler
+* Added Run Now button to the import scheduler
+* Added server time information to the admin page. Displays after Export Users link.
+* Hinted at above: Added beta user export button. Presently this is a very basic feature that is in its embryonic stages.
+* Security: Added test to admin page init. Only WP users with Manage Options capabilities can see the import admin page. Will switch this to test for current user is admin.
+
 = 1.0.3.1 =
 * Fixed bug in import scheduler
 
