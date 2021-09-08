@@ -5,7 +5,6 @@ Requires at least: 3.1
 Requires PHP: 5.6
 Tested up to: 5.8
 Stable tag: trunk
-Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4GC4JEZH7KSKL
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,6 +16,8 @@ Import users from a CSV into WordPress
 This plugin allows you to import users from an uploaded CSV file. It will add users with basic information as well as meta fields and user role.
 
 You can also choose to send a notification to the new users and to display password nag on user login.
+
+This is the enahnced forked version downloaded from https://github.com/VR51/import-users-from-csv
 
 [Check out my other free plugins.](https://profiles.wordpress.org/users/andrewza/)
 
@@ -31,6 +32,8 @@ You can also choose to send a notification to the new users and to display passw
 
 For feature request and bug reports, [please use the forums](https://wordpress.org/support/plugin/import-users-from-csv).
 Code contributions are welcome [on Github](https://github.com/andrewlimaza/import-users-from-csv).
+
+WARNING: When used with PMPro and LearnDash, do not set a PMPro membership restriction for a course unless you want manually enrolled course participants who are not in the selected PMPro membership group(s) to be automatically purged from their LearnDash course when CSV imports run. I (Lee/VR51) have raised a ticket with PMPro about this bug/feature of PMPro's LearnDash integration. This issue is present in all versions of Import Users from CSV and probably all user import plugins/options.
 
 == Installation ==
 
