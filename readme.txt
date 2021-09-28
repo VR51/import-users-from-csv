@@ -78,6 +78,9 @@ Thanks to Ulrich Sossou for initially creating this plugin. Be sure to [check ou
 
 == Changelog ==
 
+= 1.0.4.1 =
+* Minor tweak: set the site address as the HTTP referrer. May prevent requests being blocked by 3rd party servers.
+
 = 1.0.4 =
 * Separated 'Update user if username or email exists' into 2 options: Update if username exists, Update if email exists.
 * Added option to record success messages when users are imported successfully. Messages are stored in the Errorlog (to be renamed)
