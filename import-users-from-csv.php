@@ -3,7 +3,7 @@
  Plugin Name: Import Users from CSV
  Plugin URI: http://wordpress.org/extend/plugins/import-users-from-csv/
  Description: Import Users data and metadata from a csv file.
- Version: 1.0.4.1
+ Version: 1.0.4.2
  Author: Andrew Lima & Contributors
  Author URI: https://andrewlima.co.za
  License: GPL2
@@ -13,7 +13,7 @@
 /*
  * Copyright 2011  Ulrich Sossou  (https://github.com/sorich87)
  * Copyright 2018  Andrew Lima  (https://github.com/andrewlimaza/import-users-from-csv)
- * Modified 2021  Lee Hodson (https://github.com/VR51/import-users-from-csv) v1.0.2, v1.0.3, v1.04
+ * Modified 2021  Lee Hodson (https://github.com/VR51/import-users-from-csv) v1.0.2, v1.0.3, v1.04.x
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
@@ -239,10 +239,10 @@ class IS_IU_Import_Users {
 		if ( isset( $_POST['_wpnonce-is-iu-import-users-users-page_import_schedule'] ) ) {
 			check_admin_referer( 'is-iu-import-users-users-page_import_schedule', '_wpnonce-is-iu-import-users-users-page_import_schedule' );
 			
-			// Set to help debugging. Unset once to wipe $caught after debugging
+			// Enable this to help debugging. Disable and enable 'delete' once to wipe $caught after debugging
 			// Stores POST data in WP Options
-			$caught[] = $_POST['submit'];
-			update_option('wp_user_import_set_import_schedule_post_log', $caught, false);
+			// $caught[] = $_POST['submit'];
+			// update_option('wp_user_import_set_import_schedule_post_log', $caught, false);
 			// delete_option('wp_user_import_set_import_schedule_post_log');
 			
 			if ( $_POST['submit'] == 'Run Now' ) {
@@ -802,30 +802,32 @@ class IS_IU_Import_Users {
 					$userdata['role'] = strtolower( $userdata['role'] );
 				}
 				
-				if ( $update ){
+				if ( $update ) {
 					$user_id = wp_update_user( $userdata );
 					// Log successes
 					if ( isset($log_successes) ) {
 						$login = $user->user_login;
-						$what = "Updated USER $login";
+						$what = "UPDATED $login";
 					}
-				} else {
+				} 
+				if ( ! $update ) {
 					$user_id = wp_insert_user( $userdata );
 					// Log successes
 					if ( isset($log_successes) ) {
 						if ( isset( $userdata['ID'] ) ) {
-							$newuser = get_user_by( 'user_email', $userdata['ID'] );
+							$newuser = get_user_by( 'id', $userdata['ID'] );
 						} else {
-							$newuser = get_user_by( 'user_email', $userdata['user_email'] );
+							$newuser = get_user_by( 'email', $userdata['user_email'] );
 						}
 						$login = $newuser->user_login;
-						$what = "Created USER $login";
+						$what = "CREATED $login";
 					}
 				}
 				
 				/* Is there an error o_O? */
 				if ( is_wp_error( $user_id ) ) {
 					$errors[$rkey] = $user_id;
+					$mdata[$rkey] = $userdata['user_login'] . ", " . $userdata['user_email'];
 				} else {
 					/* If no error, let's update the user meta too! */
 					if ( $usermeta ) {
@@ -833,7 +835,7 @@ class IS_IU_Import_Users {
 							$metavalue = maybe_unserialize( $metavalue );
 							update_user_meta( $user_id, $metakey, $metavalue );
 						}
-						$successes[$rkey] = "User $what";
+						$successes[$rkey] = "$what";
 					}
 					
 					/* If we created a new user, maybe set password nag and send new user notification? */
@@ -864,7 +866,7 @@ class IS_IU_Import_Users {
 		do_action( 'is_iu_post_users_import', $user_ids, $errors );
 		
 		/* Let's log the errors */
-		self::log_errors( $errors );
+		self::log_errors( $errors, $mdata );
 		self::log_successes( $successes );
 		
 		return array(
@@ -949,7 +951,7 @@ class IS_IU_Import_Users {
 	 *
 	 * @since 0.2
 	 **/
-	private static function log_errors( $errors ) {
+	private static function log_errors( $errors, $mdata ) {
 		if ( empty( $errors ) ){
 			return;
 		}
@@ -960,6 +962,8 @@ class IS_IU_Import_Users {
 		foreach ( $errors as $key => $error ) {
 			$line = $key + 2;
 			$message = $error->get_error_message();
+			$udata = $mdata[$key];
+			$message = "$message ( $udata )";
 			@fwrite( $log, sprintf( __( '[Line %1$s] %2$s' , 'import-users-from-csv'), $line, $message ) . "\n" );
 		}
 		
