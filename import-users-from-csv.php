@@ -134,8 +134,6 @@ class IS_IU_Import_Users {
 		// Download and store the CSV file that will be imported
 		// This step is not necessary in all cases but some servers and programs.. meh!
 		$upload_dir = wp_upload_dir();
-		$dir = trailingslashit( $upload_dir['basedir'] ) . $direname;
-		$upload_dir = wp_upload_dir();
 		$dir = trailingslashit( $upload_dir['basedir'] ) . $dirname;
 		
 		$file = $dir . "import.csv";
